@@ -5,7 +5,14 @@ import HeaderLayout from '../Layout/HeaderLayout'
 
 const Dashboard = () => {
 
-  return('Não está facil')
+  return(
+        
+        <div>
+          <HeaderLayout/>
+          <Sidebar/>
+        </div>
+      
+        )
   
     
   
