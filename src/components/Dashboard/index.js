@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Modal, Form, Input, message, Select, Card, Row, Col, Upload } from 'antd';
 import { UploadOutlined, LikeOutlined } from '@ant-design/icons';
+import Sidebar from '../Layout/SideBar';
+import { Header } from 'antd/es/layout/layout';
 
 const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [posts, setPosts] = useState([]);
-
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [expandedPost, setExpandedPost] = useState(null);
 
   useEffect(() => {
     const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
@@ -17,81 +20,121 @@ const Dashboard = () => {
     localStorage.setItem('posts', JSON.stringify(newPosts));
   };
 
-  const showModal = () => {
+  const calculateRelativeTime = (createdAt) => {
+    const now = new Date();
+    const postTime = new Date(createdAt);
+    const diffInMinutes = Math.floor((now - postTime) / 60000);
+
+    if (diffInMinutes < 1) return 'Agora mesmo';
+    if (diffInMinutes < 60) return `há ${diffInMinutes} minutos`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `há ${diffInHours} horas`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `há ${diffInDays} dias`;
+  };
+
+  const showModal = (index = null) => {
     setIsModalOpen(true);
+    setEditingIndex(index);
+    if (index !== null) {
+      const postToEdit = posts[index];
+      form.setFieldsValue({
+        title: postToEdit.tema,
+        subtitle: postToEdit.subtema,
+        content: postToEdit.conteudo,
+        image: postToEdit.imagem
+          ? [{ url: postToEdit.imagem, thumbUrl: postToEdit.imagem }]
+          : [],
+      });
+    }
   };
 
   const handleCancel = () => {
     setIsModalOpen(false);
-    form.resetFields(); // Limpa os campos ao fechar o modal
+    form.resetFields();
+    setEditingIndex(null);
   };
 
-  const handleCreatePost = () => {
+  const handleCreateOrUpdatePost = () => {
     form
       .validateFields()
       .then((values) => {
-        const temaSelecionado = values.title;
-
         const newPost = {
-          tema: temaSelecionado, 
-          subtema: values.subtitle, 
+          tema: values.title,
+          subtema: values.subtitle,
           conteudo: values.content,
-          imagem: values.image ? values.image[0].thumbUrl : null,
-          likes: 0, 
-          liked: false, 
+          imagem: values.image?.[0]?.thumbUrl || null,
+          likes: editingIndex !== null ? posts[editingIndex].likes : 0,
+          liked: editingIndex !== null ? posts[editingIndex].liked : false,
+          createdAt:
+            editingIndex !== null
+              ? posts[editingIndex].createdAt
+              : new Date().toISOString(),
         };
 
-        const updatedPosts = [...posts, newPost];
-        setPosts(updatedPosts); 
+        const updatedPosts =
+          editingIndex !== null
+            ? posts.map((post, index) => (index === editingIndex ? newPost : post))
+            : [...posts, newPost];
+
+        setPosts(updatedPosts);
         savePostsToLocalStorage(updatedPosts);
-        message.success('Post criado com sucesso!');
-        form.resetFields(); 
+        message.success(
+          editingIndex !== null
+            ? 'Post atualizado com sucesso!'
+            : 'Post criado com sucesso!'
+        );
+        form.resetFields();
         setIsModalOpen(false);
+        setEditingIndex(null);
       })
       .catch((info) => {
         console.error('Erro na validação:', info);
       });
   };
 
-  // Função para curtir um post
+  const handleDeletePost = (index) => {
+    const updatedPosts = posts.filter((_, i) => i !== index);
+    setPosts(updatedPosts);
+    savePostsToLocalStorage(updatedPosts);
+    message.success('Post excluído com sucesso!');
+  };
+
   const handleLikePost = (index) => {
     const updatedPosts = [...posts];
-    
-    // Verifica se o post já foi curtido
     if (updatedPosts[index].liked) {
       message.info('Você já curtiu esse post!');
       return;
     }
-
-    // Se não foi curtido, incrementa o contador de curtidas e marca como curtido
-    updatedPosts[index].likes += 1; // Incrementa o contador de curtidas
-    updatedPosts[index].liked = true; // Marca o post como curtido
-    
-    setPosts(updatedPosts); // Atualiza os posts
-    savePostsToLocalStorage(updatedPosts); // Salva no LocalStorage
+    updatedPosts[index].likes += 1;
+    updatedPosts[index].liked = true;
+    setPosts(updatedPosts);
+    savePostsToLocalStorage(updatedPosts);
   };
 
-  // Função para excluir um post
-  const handleDeletePost = (index) => {
-    const updatedPosts = posts.filter((_, i) => i !== index); // Remove o post pelo índice
-    setPosts(updatedPosts); // Atualiza a lista de posts
-    savePostsToLocalStorage(updatedPosts); // Salva no LocalStorage
-    message.success('Post excluído com sucesso!');
+  const handleShowFullPost = (post) => {
+    setExpandedPost(post);
+  };
+
+  const handleCloseFullPost = () => {
+    setExpandedPost(null);
   };
 
   return (
     <div>
-      <div style={{ padding: '20px' }}>
-        <Button type="primary" onClick={showModal}>
+      <Header />
+      <Sidebar />
+      <div style={{ padding: '20px', marginLeft: '200px' }}>
+        <Button type="primary" onClick={() => showModal()}>
           Adicionar Post
         </Button>
 
         <Modal
-          title="Adicionar Novo Post"
+          title={editingIndex !== null ? 'Editar Post' : 'Adicionar Novo Post'}
           open={isModalOpen}
           onCancel={handleCancel}
-          onOk={handleCreatePost}
-          okText="Criar"
+          onOk={handleCreateOrUpdatePost}
+          okText={editingIndex !== null ? 'Atualizar' : 'Criar'}
           cancelText="Cancelar"
         >
           <Form form={form} layout="vertical">
@@ -109,18 +152,11 @@ const Dashboard = () => {
                   { value: 'Biomas', label: 'Biomas' },
                   { value: 'Teste2', label: 'Teste2' },
                   { value: 'Teste3', label: 'Teste3' },
-                  { value: 'Teste4', label: 'Teste4' },
-                  { value: 'Teste5', label: 'Teste5' },
-                  { value: 'Teste6', label: 'Teste6' },
                 ]}
               />
             </Form.Item>
-            <Form.Item
-              name="subtitle"
-              label="Subtema"
-              rules={[{ required: false }]}
-            >
-              <Input placeholder="Digite o subtema do post" />
+            <Form.Item name="subtitle" label="Subtema">
+              <Input placeholder="Digite o subtema do post" maxLength={100} />
             </Form.Item>
             <Form.Item
               name="content"
@@ -134,49 +170,59 @@ const Dashboard = () => {
               label="Imagem"
               valuePropName="fileList"
               getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-              rules={[{ required: false }]}
             >
-              <Upload
-                listType="picture"
-                beforeUpload={() => false} // Evita upload automático
-              >
+              <Upload listType="picture" beforeUpload={() => false}>
                 <Button icon={<UploadOutlined />}>Selecionar Imagem</Button>
               </Upload>
             </Form.Item>
           </Form>
         </Modal>
 
-        {/* Lista de posts exibida em cards */}
-        <Row gutter={[16, 16]} style={{ marginTop: '20px' }}>
+        <Row gutter={[0, 16]} style={{ marginTop: '20px' }}>
           {posts.map((post, index) => (
-            <Col xs={24} sm={12} lg={8} key={index}>
+            <Col xs={15} key={index}>
               <Card
                 title={post.tema}
                 bordered
                 extra={
-                  <Button
-                    type="link"
-                    danger
-                    onClick={() => handleDeletePost(index)}
-                  >
-                    Excluir
-                  </Button>
+                  <>
+                    <Button type="link" onClick={() => showModal(index)}>
+                      Editar
+                    </Button>
+                    <Button type="link" danger onClick={() => handleDeletePost(index)}>
+                      Excluir
+                    </Button>
+                  </>
                 }
-                style={{ wordWrap: 'break-word' }}
               >
                 <p style={{ fontStyle: 'italic', color: 'gray', marginBottom: '10px' }}>
                   {post.subtema}
+                </p>
+                <p style={{ fontSize: '12px', color: 'gray', marginBottom: '10px' }}>
+                  Criado {calculateRelativeTime(post.createdAt)}
                 </p>
                 {post.imagem && (
                   <img
                     src={post.imagem}
                     alt="Post"
-                    style={{ width: '100%', marginBottom: '10px' }}
+                    style={{
+                      width: '100%',
+                      maxHeight: '200px',
+                      objectFit: 'cover',
+                      marginBottom: '10px',
+                    }}
                   />
                 )}
-                <p style={{ whiteSpace: 'pre-line', wordBreak: 'break-word' }}>
-                  {post.conteudo}
+                <p style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                  {post.conteudo.length > 500
+                    ? `${post.conteudo.slice(0, 500)}...`
+                    : post.conteudo}
                 </p>
+                {post.conteudo.length > 500 && (
+                  <Button type="link" onClick={() => handleShowFullPost(post)}>
+                    Ler mais
+                  </Button>
+                )}
                 <Button
                   type="link"
                   icon={<LikeOutlined />}
@@ -186,9 +232,23 @@ const Dashboard = () => {
                   Curtir ({post.likes})
                 </Button>
               </Card>
+
             </Col>
           ))}
         </Row>
+
+
+        <Modal
+          title={expandedPost?.tema}
+          open={!!expandedPost}
+          onCancel={handleCloseFullPost}
+          footer={null}
+        >
+          <p style={{ fontStyle: 'italic', color: 'gray', marginBottom: '10px' }}>
+            {expandedPost?.subtema}
+          </p>
+          <p>{expandedPost?.conteudo}</p>
+        </Modal>
       </div>
     </div>
   );
