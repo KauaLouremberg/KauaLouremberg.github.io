@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Modal, Form, Input, message, Select, Card, Row, Col, Upload } from 'antd';
-import { UploadOutlined, LikeOutlined } from '@ant-design/icons';
-import Sidebar from '../Layout/SideBar';
-import { Header } from 'antd/es/layout/layout';
+import React, { useState, useEffect, useRef } from 'react';
+import { Button, Modal, Form, Input, message, Select, Card, Row, Col, Upload, Switch } from 'antd';
+import { UploadOutlined, LikeOutlined, UserOutlined } from '@ant-design/icons';
+import HeaderLayout from '../Layout/HeaderLayout';
 
 const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [posts, setPosts] = useState([]);
+  const postRefs = useRef({});
   const [editingIndex, setEditingIndex] = useState(null);
   const [expandedPost, setExpandedPost] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
-    setPosts(storedPosts);
+    setPosts(storedPosts);  
   }, []);
 
   const savePostsToLocalStorage = (newPosts) => {
@@ -31,6 +32,26 @@ const Dashboard = () => {
     if (diffInHours < 24) return `há ${diffInHours} horas`;
     const diffInDays = Math.floor(diffInHours / 24);
     return `há ${diffInDays} dias`;
+  };
+
+  const handleSearch = (searchTerm) => {    
+    setSearchTerm(searchTerm);
+    const matchingPost = posts.find(
+      (post) =>
+        (post.tema && post.tema.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (post.subtema &&
+          post.subtema.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    if (matchingPost) {
+      // Rolar para a postagem correspondente
+      const postElement = postRefs.current[matchingPost.id];
+      if (postElement) {
+        postElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    } else {
+      message.info("Nenhuma postagem encontrada.");
+    }
   };
 
   const showModal = (index = null) => {
@@ -60,6 +81,7 @@ const Dashboard = () => {
       .validateFields()
       .then((values) => {
         const newPost = {
+          id: editingIndex !== null ? posts[editingIndex].id : Date.now(),
           tema: values.title,
           subtema: values.subtitle,
           conteudo: values.content,
@@ -70,6 +92,8 @@ const Dashboard = () => {
             editingIndex !== null
               ? posts[editingIndex].createdAt
               : new Date().toISOString(),
+          creator: values.criador,
+          anonimo: values.anonimo || false,  // Armazenando a opção Anônimo na postagem
         };
 
         const updatedPosts =
@@ -122,10 +146,9 @@ const Dashboard = () => {
 
   return (
     <div>
-      <Header />
-      <Sidebar />
-      <div style={{ padding: '20px', marginLeft: '200px' }}>
-        <Button type="primary" onClick={() => showModal()}>
+      <HeaderLayout onSearch={handleSearch} />
+      <div style={{ padding: '20px', marginLeft: '1px' }}>
+        <Button type="primary" onClick={() => showModal()} style={{backgroundColor: "#FAA958"}}>
           Adicionar Post
         </Button>
 
@@ -150,14 +173,32 @@ const Dashboard = () => {
                 optionFilterProp="label"
                 options={[
                   { value: 'Biomas', label: 'Biomas' },
-                  { value: 'Teste2', label: 'Teste2' },
-                  { value: 'Teste3', label: 'Teste3' },
+                  { value: 'Cell', label: 'Cell' },
+                  { value: 'Son Goku', label: 'Son Goku' },
                 ]}
               />
             </Form.Item>
+
+            <Form.Item
+              name="criador"
+              label="Criador"
+              rules={[{ required: true, message: 'O Criador é obrigatório!' }]}
+            >
+              <Input name="criador" type="text" maxLength={50} />
+            </Form.Item>
+
+            <Form.Item
+              name="anonimo"
+              label="Anônimo?"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+
             <Form.Item name="subtitle" label="Subtema">
               <Input placeholder="Digite o subtema do post" maxLength={100} />
             </Form.Item>
+
             <Form.Item
               name="content"
               label="Conteúdo"
@@ -181,9 +222,17 @@ const Dashboard = () => {
         <Row gutter={[0, 16]} style={{ marginTop: '20px' }}>
           {posts.map((post, index) => (
             <Col xs={15} key={index}>
+              <div ref={(el) => (postRefs.current[post.id] = el)}>
               <Card
                 title={post.tema}
-                bordered
+                bordered  
+                style={{
+                  border: searchTerm &&
+                    (post.tema.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      post.subtema.toLowerCase().includes(searchTerm.toLowerCase()))
+                    ? "2px solid #FAA958"
+                    : "1px solid #d9d9d9",
+                }}
                 extra={
                   <>
                     <Button type="link" onClick={() => showModal(index)}>
@@ -195,6 +244,9 @@ const Dashboard = () => {
                   </>
                 }
               >
+                <p style={{ fontStyle: 'italic', color: 'gray', marginBottom: '10px', display: "flex" }}>
+                  <UserOutlined style={{marginRight: "10px"}} /> {post.anonimo ? 'Anônimo' : post.creator || 'Criador não informado'}
+                </p>
                 <p style={{ fontStyle: 'italic', color: 'gray', marginBottom: '10px' }}>
                   {post.subtema}
                 </p>
@@ -232,24 +284,36 @@ const Dashboard = () => {
                   Curtir ({post.likes})
                 </Button>
               </Card>
-
+              </div>
             </Col>
           ))}
         </Row>
+      </div>
 
-
+      {expandedPost && (
         <Modal
-          title={expandedPost?.tema}
-          open={!!expandedPost}
+          title="Post Completo"
+          open={expandedPost !== null}
           onCancel={handleCloseFullPost}
           footer={null}
         >
-          <p style={{ fontStyle: 'italic', color: 'gray', marginBottom: '10px' }}>
-            {expandedPost?.subtema}
-          </p>
-          <p>{expandedPost?.conteudo}</p>
+          <h2>{expandedPost.tema}</h2>
+          <p>{expandedPost.subtema}</p>
+          <p>{expandedPost.conteudo}</p>
+          {expandedPost.imagem && (
+            <img
+              src={expandedPost.imagem}
+              alt="Imagem do Post"
+              style={{
+                width: '100%',
+                maxHeight: '300px',
+                objectFit: 'cover',
+                marginBottom: '10px',
+              }}
+            />
+          )}
         </Modal>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,46 +1,51 @@
-import React from 'react'
-import { Image, Layout, Menu } from "antd"
-import { UserOutlined } from '@ant-design/icons'
+import React from 'react';
+import { Form, Layout, Menu } from "antd";
+import Search from 'antd/es/transfer/search';
 
-const HeaderLayout = () => {
-    
-    const { Header } = Layout
-    
-    return (
+const HeaderLayout = ({ onSearch }) => {
+  const { Header } = Layout;
 
-            <Layout>
-            <Header style={{ display: 'flex', alignItems: 'center', flex: '1 1 30%', }}>
-                <div className='demo-logo'/>
-                <Menu
-                theme='dark'
-                mode="horizontal"
-                items=
-                {[  
-                    {
-                        key: '1',
-                        icon: <UserOutlined/>,
-                        label: 'nav1'
-                    },
-                    {
-                        key: '2',
-                        icon: <UserOutlined/>,
-                        label: 'nav2'
-                    },
-                    {
-                        key: '3',
-                        icon: <UserOutlined/>,
-                        label: 'nav3'
-                    },
-                ]}
-                style={{ flex: 1, minWidth: 0,}}
-                />
+  return (
+    <Layout>
+      <Header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          flex: '1 1 30%',
+          backgroundColor: "#FAA958"
+        }}
+      >
+        <div className='demo-logo' />
+        <Menu
+          theme='dark'
+          mode="horizontal"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            backgroundColor: "#FAA958"
+          }}
+        >
+          <h1 style={{ color: "#FFFFFF", marginTop: "15px" }}>
+            JOAQUIM NOGUEIRA BLOG
+          </h1>
+          <Form.Item
+            style={{
+              alignContent: "center",
+              marginLeft: "600px",
+              marginTop: "35px"
+            }}
+          >
+            <Search
+              placeholder="Buscar"
+              enterButton="Search"
+              size="large"
+              onSearch={onSearch} // Conectando ao evento de busca
+            />
+          </Form.Item>
+        </Menu>
+      </Header>
+    </Layout>
+  );
+};
 
-                
-            </Header>
-        </Layout>
-    )
-}
-
-
-
-export default HeaderLayout
+export default HeaderLayout;
