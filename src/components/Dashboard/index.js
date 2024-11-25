@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button, Modal, Form, Input, message, Select, Card, Row, Col, Upload, Switch } from 'antd';
+import { Button, Modal, Form, Input, message, Select, Card, Row, Col, Upload, Switch, Divider } from 'antd';
 import { UploadOutlined, LikeOutlined, UserOutlined } from '@ant-design/icons';
 import HeaderLayout from '../Layout/HeaderLayout';
 
@@ -34,7 +34,8 @@ const Dashboard = () => {
     return `há ${diffInDays} dias`;
   };
 
-  const handleSearch = (searchTerm) => {    
+  const handleSearch = (searchTerm) => {
+    console.log("Search triggered with term:", searchTerm);
     setSearchTerm(searchTerm);
     const matchingPost = posts.find(
       (post) =>
@@ -42,17 +43,19 @@ const Dashboard = () => {
         (post.subtema &&
           post.subtema.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-
+  
     if (matchingPost) {
-      // Rolar para a postagem correspondente
       const postElement = postRefs.current[matchingPost.id];
       if (postElement) {
         postElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        message.error("Erro ao localizar o elemento correspondente.");
       }
     } else {
       message.info("Nenhuma postagem encontrada.");
     }
   };
+  
 
   const showModal = (index = null) => {
     setIsModalOpen(true);
@@ -152,6 +155,8 @@ const Dashboard = () => {
           Adicionar Post
         </Button>
 
+        <Divider />
+
         <Modal
           title={editingIndex !== null ? 'Editar Post' : 'Adicionar Novo Post'}
           open={isModalOpen}
@@ -172,9 +177,12 @@ const Dashboard = () => {
                 placeholder="Buscar Tema"
                 optionFilterProp="label"
                 options={[
-                  { value: 'Biomas', label: 'Biomas' },
-                  { value: 'Cell', label: 'Cell' },
-                  { value: 'Son Goku', label: 'Son Goku' },
+                  { value: 'Amazônia', label: 'Amazônia' },
+                  { value: 'Cerrado', label: 'Cerrado' },
+                  { value: 'Caatinga', label: 'Caatinga' },
+                  { value: 'Pampa', label: 'Pampa' },
+                  { value: 'Pantanal', label: 'Pantanal' },
+                  { value: 'Mata Atlântica', label: 'Mata Atlântica' },
                 ]}
               />
             </Form.Item>

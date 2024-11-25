@@ -1,6 +1,6 @@
 import React from 'react';
-import { Form, Layout, Menu } from "antd";
-import Search from 'antd/es/transfer/search';
+import { Form, Layout, Menu, Input } from "antd";
+const { Search } = Input;
 
 const HeaderLayout = ({ onSearch }) => {
   const { Header } = Layout;
@@ -32,14 +32,13 @@ const HeaderLayout = ({ onSearch }) => {
             style={{
               alignContent: "center",
               marginLeft: "600px",
-              marginTop: "35px"
+              marginTop: "30px"
             }}
           >
             <Search
-              placeholder="Buscar"
-              enterButton="Search"
-              size="large"
-              onSearch={onSearch} // Conectando ao evento de busca
+              placeholder="O que está procurando?"
+              size="medium"
+              onSearch={onSearch}
             />
           </Form.Item>
         </Menu>
